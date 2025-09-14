@@ -398,13 +398,16 @@ QBCore.Functions.CreateCallback('mdt:server:GetProfileData', function(source, cb
 	}
 
 	local housingSystem
+	local propertiesData = {}
 
 	if GetResourceState("ps-housing") == "started" then
         housingSystem = "ps-housing"
     elseif GetResourceState("qbx_properties") == "started" then
         housingSystem = "qbx_properties"
-    elseif GetResourceState("qb-apartments") == "started" then
+    elseif GetResourceState("qb-apartments") == "started" and not GetResourceState("bcs_housing") == "started" then
         housingSystem = "qb-apartments"
+	elseif GetResourceState("bcs_housing") == "started" then
+		housingSystem = "bcs_housing"
     else
         return print("^1[CONFIG ERROR]^0 No known housing resource is started.")
     end
@@ -456,6 +459,19 @@ QBCore.Functions.CreateCallback('mdt:server:GetProfileData', function(source, cb
         else
             TriggerClientEvent("QBCore:Notify", src, 'The citizen does not have an apartment.', 'error')
 		end
+    elseif housingSystem == "bcs_housing" then
+		local houses = exports.bcs_housing:GetOwnedHomeKeys(target.citizenid)
+		if houses and next(houses) then
+			for i = 1, #houses, 1 do
+				local house = houses[i]
+				table.insert(propertiesData, {
+					label = house.name,
+					coords = house.complex == 'Flat' and house.data.flat.coords or house.entry
+				})
+			end
+		else
+			TriggerClientEvent("QBCore:Notify", src, 'The citizen does not have a property.', 'error')
+		end
 	else
 		print("^1[CONFIG ERROR]^0 No known housing resource is started")
     end
@@ -475,7 +491,7 @@ QBCore.Functions.CreateCallback('mdt:server:GetProfileData', function(source, cb
 		mdtinfo = '',
 		tags = {},
 		vehicles = {},
-		properties = {},
+		properties = propertiesData,
 		gallery = {},
 		isLimited = false
 	}
